@@ -26,6 +26,8 @@ export function parseArgumentsIntoOptions(rawArgs: Args): RawOptions {
 
   const skipInstall = args["--skip-install"] ?? null;
 
+  const hasInstallRelatedFlag = install || skipInstall;
+
   const smartContractFramework = args["--smartContractFramework"] ?? null;
   const isTemplateValid = checkValidSmartContractFramework(
     smartContractFramework
@@ -46,7 +48,7 @@ export function parseArgumentsIntoOptions(rawArgs: Args): RawOptions {
 
   return {
     project,
-    install: install ?? !skipInstall ?? null,
+    install: hasInstallRelatedFlag ? install || !skipInstall : null,
     smartContractFramework:
       smartContractFramework && isTemplateValid ? smartContractFramework : null,
   };
