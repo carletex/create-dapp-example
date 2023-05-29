@@ -129,7 +129,7 @@ const mergeExtensionsPackageJson = async (
   });
 };
 
-export async function mergeSolidityFrameWorksPackageJson(
+async function mergeSolidityFrameWorksPackageJson(
   options: Options,
   templateDir: string,
   targetDir: string

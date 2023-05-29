@@ -13,7 +13,11 @@ export type RawOptions = {
   install: boolean | null;
 };
 
-export type Options = RawOptions & {
+type NonNullableRawOptions = {
+  [Prop in keyof RawOptions]: NonNullable<RawOptions[Prop]>;
+};
+
+export type Options = NonNullableRawOptions & {
   extensions: Extensions[];
   smartContractFramework: Template;
 };
