@@ -4,6 +4,7 @@ import { checkValidSmartContractFramework } from "./check-valid-smart-contract-f
 import arg from "arg";
 import chalk from "chalk";
 
+// TODO update smartContractFramework code with general extensions
 export function parseArgumentsIntoOptions(rawArgs: Args): RawOptions {
   const args = arg(
     {
@@ -49,7 +50,6 @@ export function parseArgumentsIntoOptions(rawArgs: Args): RawOptions {
   return {
     project,
     install: hasInstallRelatedFlag ? install || !skipInstall : null,
-    smartContractFramework:
-      smartContractFramework && isTemplateValid ? smartContractFramework : null,
+    extensions: null, // TODO add extensions flags
   };
 }

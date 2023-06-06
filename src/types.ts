@@ -10,19 +10,16 @@ export type Template = (typeof smartContractFrameworks)[number];
 export type Extensions = (typeof availableExtensions)[number];
 
 export type RawOptions = {
-  smartContractFramework: Template | null;
   project: string | null;
   install: boolean | null;
+  extensions: Extension[] | null;
 };
 
 type NonNullableRawOptions = {
   [Prop in keyof RawOptions]: NonNullable<RawOptions[Prop]>;
 };
 
-export type Options = NonNullableRawOptions & {
-  extensions: Extensions[];
-  smartContractFramework: Template;
-};
+export type Options = NonNullableRawOptions;
 
 export type templateAppConfig = {
   _appImports: string[];
@@ -70,13 +67,16 @@ export type Config = {
 export const isDefined = <T>(item: T | undefined | null): item is T =>
   item !== undefined && item !== null;
 
-export type ExtensionLeaf = { name: string; value: string };
-export type ExtensionBranch = ExtensionLeaf & {
-  extensions: ExtensionDescriptor[];
+export type ExtensionDescriptor = {
+  name: string;
+  value: string;
+  extensions?: ExtensionDescriptor[];
 };
-export type ExtensionDescriptor = ExtensionLeaf | ExtensionBranch;
 export type ExtensionTree = {
   [extension in Extension]?: ExtensionDescriptor;
+};
+export type ExtensionBranch = ExtensionDescriptor & {
+  extensions: ExtensionDescriptor[];
 };
 
 export const extensionIsBranch = (

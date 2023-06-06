@@ -1,71 +1,75 @@
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 import {
   ExtensionDescriptor,
-  ExtensionLeaf,
   ExtensionTree,
   extensionIsBranch,
   isDefined,
 } from "../types";
 
-// TODO this should be generated based on the /templates folder structure
-export const getExtensionsTree = (): ExtensionTree => ({
-  a1: {
-    name: "A1",
-    value: "a1",
-  },
-  a2: {
-    name: "A2",
-    value: "a2",
-    extensions: [
-      {
-        name: "Extension for A2",
-        value: "a2-a",
-      },
-    ],
-  },
-  a3: {
-    name: "A3",
-    value: "a3",
-  },
-  b: {
-    name: "optional B",
-    value: "b",
-    extensions: [
-      {
-        name: "B Extension 1",
-        value: "b-extension1",
-        extensions: [{ name: "nested b1", value: "bb1" }],
-      },
-      {
-        name: "B Extension 2",
-        value: "b-extension2",
-        extensions: [{ name: "nested b2", value: "bb2" }],
-      },
-    ],
-  },
-  c: {
-    name: "optional C",
-    value: "c",
-  },
-  d: {
-    name: "optional D",
-    value: "d",
-  },
-});
+let cachedExtensionTree: ExtensionTree | null = null;
 
-export const expandExtensionsWithNesting = (
-  extensions: (ExtensionDescriptor | undefined)[],
-  depth = 0
-): ExtensionLeaf[] => {
-  return extensions
-    .filter(isDefined)
-    .flatMap((ext: ExtensionDescriptor) =>
-      [
-        { name: "\t".repeat(depth) + ext.name, value: ext.value },
-        extensionIsBranch(ext)
-          ? expandExtensionsWithNesting(ext.extensions, depth + 1)
-          : undefined,
-      ]
-        .filter(isDefined)
-        .flat()
-    );
+const traverseExtensions = async (basePath: string): Promise<ExtensionTree> => {
+  const extensionsPath = path.resolve(basePath, "extensions");
+  let extensions;
+  try {
+    extensions = fs.readdirSync(extensionsPath);
+  } catch (error) {
+    return {};
+  }
+  const extensionEntries = await Promise.all(
+    extensions.map(async (ext) => {
+      const extPath = path.resolve(extensionsPath, ext);
+      const configFile = fs
+        .readdirSync(extPath)
+        .find((fileOrFolder) => /^config\.(js|ts)$/.test(fileOrFolder));
+      let name = ext;
+      let value = ext;
+      if (configFile) {
+        const extConfigPath = path.resolve(extPath, configFile);
+        const extConfig = await import(extConfigPath).catch((err) => {
+          console.log("importing", extConfigPath);
+          if ((err.code = "ERR_MODULE_NOT_FOUND")) {
+            console.log(err);
+          }
+        });
+        name = extConfig.name ?? ext;
+        value = extConfig.value ?? ext;
+      }
+
+      const subExtensions = await traverseExtensions(extPath);
+      const hasSubExtensions = Object.entries(subExtensions).length !== 0;
+      const extDescriptor: ExtensionDescriptor = {
+        name,
+        value,
+        extensions: Object.values(subExtensions),
+      };
+      if (!hasSubExtensions) {
+        delete extDescriptor.extensions;
+      }
+
+      return [value, extDescriptor];
+    })
+  );
+
+  const tree = Object.fromEntries(extensionEntries);
+  return tree;
 };
+
+const generateExtensionTree = async (): Promise<ExtensionTree> => {
+  const currentFileUrl = import.meta.url;
+
+  const templatesDirectory = path.resolve(
+    decodeURI(fileURLToPath(currentFileUrl)),
+    "../../templates"
+  );
+
+  const tree = await traverseExtensions(templatesDirectory);
+
+  cachedExtensionTree = tree;
+  return tree;
+};
+
+export const getExtensionsTree = async (): Promise<ExtensionTree> =>
+  cachedExtensionTree ?? generateExtensionTree();

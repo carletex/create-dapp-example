@@ -1,5 +1,6 @@
 import config from "../config";
 import {
+  Extension,
   ExtensionDescriptor,
   Options,
   RawOptions,
@@ -10,18 +11,22 @@ import inquirer, { Answers } from "inquirer";
 import { getExtensionsTree } from "./exensions-tree";
 
 // default values for unspecified args
-const defaultOptions: Omit<Options, "extensions"> = {
+const defaultOptions: RawOptions = {
   project: "my-dapp-example",
-  smartContractFramework: "hardhat",
   install: true,
+  extensions: [],
 };
+
+const invalidQuestionNames = ["project", "install"];
 
 export async function promptForMissingOptions(
   options: RawOptions
 ): Promise<Options> {
-  const cliAnswers = options;
+  const cliAnswers = Object.fromEntries(
+    Object.entries(options).filter(([key, value]) => value !== null)
+  );
   const questions = [];
-  const extensionsTree = getExtensionsTree();
+  const extensionsTree = await getExtensionsTree();
 
   questions.push({
     type: "input",
@@ -57,6 +62,15 @@ export async function promptForMissingOptions(
   };
 
   config.questions.forEach((question) => {
+    if (invalidQuestionNames.includes(question.name)) {
+      throw new Error(
+        `The name of the question can't be "${
+          question.name
+        }". The invalid names are: ${invalidQuestionNames
+          .map((w) => `"${w}"`)
+          .join(", ")}`
+      );
+    }
     const extensions = question.extensions
       .map((ext) => extensionsTree[ext])
       .filter(isDefined);
@@ -80,11 +94,30 @@ export async function promptForMissingOptions(
 
   const answers = await inquirer.prompt(questions, cliAnswers);
 
-  return {
-    smartContractFramework:
-      options.smartContractFramework ?? answers.smartContractFramework,
+  const mergedOptions: Options = {
     project: options.project ?? answers.project,
-    extensions: answers.extensions,
     install: options.install ?? answers.install,
+    extensions: [],
   };
+
+  config.questions.forEach((question) => {
+    const { name } = question;
+    const choice: Extension[] = [answers[name]].flat();
+    mergedOptions.extensions.push(...choice);
+  });
+
+  const recurringAddNestedExtensions = (baseExtensions: Extension[]) => {
+    baseExtensions.forEach((extValue) => {
+      const nestedExtKey = `${extValue}-extensions`;
+      const nestedExtensions = answers[nestedExtKey];
+      if (nestedExtensions) {
+        mergedOptions.extensions.push(...nestedExtensions);
+        recurringAddNestedExtensions(nestedExtensions);
+      }
+    });
+  };
+
+  recurringAddNestedExtensions(mergedOptions.extensions);
+
+  return mergedOptions;
 }
