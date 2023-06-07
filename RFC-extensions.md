@@ -30,19 +30,49 @@ For each extension there is an optional `templates/extensions/{extensionName}/co
 
 The reason we need to use .js files for these is because those files are imported at runtime by the node executable.
 
+## Config files API
+### `src/config.ts`
+Have a look at `src/types.ts#Config`
+
+### `{extension}/config.*`
+Since these files can't be .ts (for now, see [Possible improvements](#possible-improvements)), the API is not typed.
+
+The values that can be exported from these files are:
+ - `name`: the string to be used when showing the package name to the user via the cli
+
+| Note that all values are optional, as well as the file itself.
+
 ## Possible improvements
 
 ### Use .json files
 self explanatory
 
 ### Use .ts files
-We could have a step during compile time where we traverse the `templates/` folder and generate types and the extension tree.
+One option to investigate is using ts-node. I haven't done any research on this path, but it might be an interesting option.
+
+Another alternative to use .ts files is to add a step during compile time where we traverse the `templates/` folder and generate types and the extension tree.
 
 In that scenario I imagine someone would add a new extension by adding a folder within `templates/` with the optional `config.ts` file. Then run a script like `yarn update-extensions`, which does the traverse generating two files:
  - `src/extension-types.ts` with the right types
  - `src/utils/extension-tree.ts` with the tree ready to export without having to traverse the filesystem during runtime.
 
 I've seen this approach being used in [Prisma](2).
+
+# Template files
+A Template file is a file to which extensions can add content. Removing content is out of scope for this experiment.
+
+## Template files API
+### Template file name
+All Template file should be named as \`{originalName}.template.js\`.
+This way we can skip those files while copying base and extensions, and process them with the values from the base and the combined extensions.
+
+### Template file contents
+All Template files should export default a function receiving named arguments and returning a string where those input arguments can be used to do string interpolation.
+
+Therefore the signature should always be \`(Record<string, string>) => string\`
+
+# Extension folder anatomy
+TODO write this section
 
 [1]: https://github.com/nextauthjs/next-auth
 [2]: https://www.prisma.io/
