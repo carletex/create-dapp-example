@@ -51,6 +51,13 @@ Edit file as you want. When you want to run the cli tool, just do:
 yarn cli
 ```
 
+If you're iterating, running the cli multiple times, but want to avoid doing the test folder cleanup manually, there's a shortcut script:
+```bash
+yarn cli-dry
+# same as `yarn cli test --skip` & `rm -rf test`
+```
+This script does a dry run, creating a `test/` folder for the cli output, and automatically skipping modules install. When it's done, it deletes the `test/` folder.
+
 **Option 2.** Build & npx
 
 ```bash
