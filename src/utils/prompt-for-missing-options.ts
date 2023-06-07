@@ -8,7 +8,7 @@ import {
   isDefined,
 } from "../types";
 import inquirer, { Answers } from "inquirer";
-import { getExtensionsTree } from "./exensions-tree";
+import { extensionDict } from "./exensions-tree";
 
 // default values for unspecified args
 const defaultOptions: RawOptions = {
@@ -26,7 +26,6 @@ export async function promptForMissingOptions(
     Object.entries(options).filter(([key, value]) => value !== null)
   );
   const questions = [];
-  const extensionsTree = await getExtensionsTree();
 
   questions.push({
     type: "input",
@@ -41,7 +40,9 @@ export async function promptForMissingOptions(
     relatedQuestion: string
   ) => {
     extensions.filter(extensionIsBranch).forEach((ext) => {
-      const nestedExtensions = ext.extensions;
+      const nestedExtensions = ext.extensions.map(
+        (nestedExt) => extensionDict[nestedExt]
+      );
       questions.push({
         // INFO: assuming nested extensions are all optional. To change this,
         // update ExtensionDescriptor adding type, and update code here.
@@ -72,7 +73,7 @@ export async function promptForMissingOptions(
       );
     }
     const extensions = question.extensions
-      .map((ext) => extensionsTree[ext])
+      .map((ext) => extensionDict[ext])
       .filter(isDefined);
 
     questions.push({

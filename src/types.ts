@@ -70,15 +70,17 @@ export const isDefined = <T>(item: T | undefined | null): item is T =>
 export type ExtensionDescriptor = {
   name: string;
   value: string;
-  extensions?: ExtensionDescriptor[];
-};
-export type ExtensionTree = {
-  [extension in Extension]?: ExtensionDescriptor;
+  path: string;
+  extensions?: Extension[];
 };
 export type ExtensionBranch = ExtensionDescriptor & {
-  extensions: ExtensionDescriptor[];
+  extensions: Extension[];
+};
+export type ExtensionDict = {
+  [extension in Extension]: ExtensionDescriptor;
 };
 
+// TODO maybe rename this
 export const extensionIsBranch = (
   extension: ExtensionDescriptor | undefined
 ): extension is ExtensionBranch => {

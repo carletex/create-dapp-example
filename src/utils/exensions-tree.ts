@@ -1,24 +1,33 @@
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
-import {
-  ExtensionDescriptor,
-  ExtensionTree,
-  extensionIsBranch,
-  isDefined,
-} from "../types";
+import { Extension, ExtensionDescriptor, ExtensionDict } from "../types";
 
-let cachedExtensionTree: ExtensionTree | null = null;
+export const extensionDict: ExtensionDict = {} as ExtensionDict;
 
-const traverseExtensions = async (basePath: string): Promise<ExtensionTree> => {
+const currentFileUrl = import.meta.url;
+
+const templatesDirectory = path.resolve(
+  decodeURI(fileURLToPath(currentFileUrl)),
+  "../../templates"
+);
+
+/**
+ * This function has side effects. It generates the extensionDict.
+ *
+ * @param basePath the path at which to start the traverse
+ * @returns the extensions found in this path. Useful for the recursion
+ */
+const traverseExtensions = async (basePath: string): Promise<Extension[]> => {
   const extensionsPath = path.resolve(basePath, "extensions");
-  let extensions;
+  let extensions: Extension[];
   try {
-    extensions = fs.readdirSync(extensionsPath);
+    extensions = fs.readdirSync(extensionsPath) as Extension[];
   } catch (error) {
-    return {};
+    return [];
   }
-  const extensionEntries = await Promise.all(
+
+  await Promise.all(
     extensions.map(async (ext) => {
       const extPath = path.resolve(extensionsPath, ext);
       const configFile = fs
@@ -39,37 +48,24 @@ const traverseExtensions = async (basePath: string): Promise<ExtensionTree> => {
       }
 
       const subExtensions = await traverseExtensions(extPath);
-      const hasSubExtensions = Object.entries(subExtensions).length !== 0;
+      const hasSubExtensions = subExtensions.length !== 0;
       const extDescriptor: ExtensionDescriptor = {
         name,
         value,
-        extensions: Object.values(subExtensions),
+        path: extPath,
+        extensions: subExtensions,
       };
       if (!hasSubExtensions) {
         delete extDescriptor.extensions;
       }
+      extensionDict[ext] = extDescriptor;
 
-      return [value, extDescriptor];
+      return subExtensions;
     })
   );
 
-  const tree = Object.fromEntries(extensionEntries);
-  return tree;
+  return extensions;
 };
 
-const generateExtensionTree = async (): Promise<ExtensionTree> => {
-  const currentFileUrl = import.meta.url;
-
-  const templatesDirectory = path.resolve(
-    decodeURI(fileURLToPath(currentFileUrl)),
-    "../../templates"
-  );
-
-  const tree = await traverseExtensions(templatesDirectory);
-
-  cachedExtensionTree = tree;
-  return tree;
-};
-
-export const getExtensionsTree = async (): Promise<ExtensionTree> =>
-  cachedExtensionTree ?? generateExtensionTree();
+await traverseExtensions(templatesDirectory);
+console.log(extensionDict);
