@@ -8,7 +8,7 @@ import {
   isDefined,
 } from "../types";
 import inquirer, { Answers } from "inquirer";
-import { extensionDict } from "./exensions-tree";
+import { extensionDict } from "./extensions-tree";
 
 // default values for unspecified args
 const defaultOptions: RawOptions = {
