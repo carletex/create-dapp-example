@@ -1,1 +1,1 @@
-[ ] handle using a prject name when a folder with that name already exists.
+[ ] handle using a project name when a folder with that name already exists.

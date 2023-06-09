@@ -19,8 +19,47 @@ import { constructHandleBarsTargetFilePath } from "../utils/construct-handlebars
 import { copySolidityFrameWorkDir } from "../utils/copy-solidityFramworks";
 import { mergePackageJson } from "../utils/merge-pacakge-json";
 import { constructAppFile } from "../utils/construct-next-app-file";
+import { extensionDict } from "../utils/extensions-tree";
 
 const copy = promisify(ncp);
+
+const copyExtensionsFiles = async (
+  { extensions }: Options,
+  targetDir: string
+) => {
+  extensions.forEach(async (extension) => {
+    const extensionPath = extensionDict[extension].path;
+    // copy root files
+    await copy(extensionPath, path.join(targetDir), {
+      clobber: false,
+      filter: (fileName) => !/config\./.test(fileName),
+    });
+
+    // merge root package.json
+    mergePackageJson(
+      path.join(targetDir, "package.json"),
+      path.join(extensionPath, "package.json")
+    );
+
+    const extensionPackagesPath = path.join(extensionPath, "packages");
+    const hasPackages = fs.existsSync(extensionPackagesPath);
+    if (hasPackages) {
+      // copy extension packages files
+      await copy(extensionPackagesPath, path.join(targetDir, "packages"), {
+        clobber: false,
+      });
+
+      // copy each package's package.json
+      const extensionPackages = fs.readdirSync(extensionPackagesPath);
+      extensionPackages.forEach((packageName) => {
+        mergePackageJson(
+          path.join(targetDir, "packages", packageName, "package.json"),
+          path.join(extensionPath, "packages", packageName, "package.json")
+        );
+      });
+    }
+  });
+};
 
 // Process template files
 const processAndCopyTemplateFiles = async (
@@ -156,21 +195,23 @@ export async function copyTemplateFiles(
   targetDir: string
 ) {
   // 1. Copy base template to target directory
-  await copy(path.join(templateDir, baseDir), targetDir, {
+  const basePath = path.join(templateDir, baseDir);
+  const isTemplateRegex = /\.template\./;
+  await copy(basePath, targetDir, {
     clobber: false,
-    filter: (fileName) => {
-      // ignore template files
-      return !fileName.includes(".hbs");
-    },
+    filter: (fileName) => !isTemplateRegex.test(fileName), // NOTE: filter IN
   });
 
-  // 2. Copy smart contract framework folder if selected.(This function only copies non conflicting files like `packages` dir)
-  await copySolidityFrameWorkDir(options, templateDir, targetDir);
+  // 2. Copy extensions folders
+  copyExtensionsFiles(options, targetDir);
+
+  // 3. Copy smart contract framework folder if selected.(This function only copies non conflicting files like `packages` dir)
+  // await copySolidityFrameWorkDir(options, templateDir, targetDir);
 
   // 4. Process template files, depending on enabled extensions
-  await processAndCopyTemplateFiles(options, templateDir, targetDir);
+  // await processAndCopyTemplateFiles(options, templateDir, targetDir);
 
-  mergeSolidityFrameWorksPackageJson(options, templateDir, targetDir);
+  // mergeSolidityFrameWorksPackageJson(options, templateDir, targetDir);
 
-  mergeExtensionsPackageJson(options, templateDir, targetDir);
+  // mergeExtensionsPackageJson(options, templateDir, targetDir);
 }

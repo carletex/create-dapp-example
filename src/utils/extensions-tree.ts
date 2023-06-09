@@ -68,4 +68,3 @@ const traverseExtensions = async (basePath: string): Promise<Extension[]> => {
 };
 
 await traverseExtensions(templatesDirectory);
-console.log(extensionDict);

@@ -63,8 +63,7 @@ A Template file is a file to which extensions can add content. Removing content 
 
 ## Template files API
 ### Template file name
-All Template file should be named as \`{originalName}.template.js\`.
-This way we can skip those files while copying base and extensions, and process them with the values from the base and the combined extensions.
+All Template file should be named as \`{originalName.withExtension}.template.js\`. This way we can skip those files while copying base and extensions, and process them with the values from the base and the combined extensions.
 
 ### Template file contents
 All Template files should export default a function receiving named arguments and returning a string where those input arguments can be used to do string interpolation.
@@ -74,5 +73,21 @@ Therefore the signature should always be \`(Record<string, string>) => string\`
 # Extension folder anatomy
 TODO write this section
 
+# Things to be aware of
+## Merging package.json files
+The package we use to merge package.json files [merge-packages](3) will use the last version of a dependency given a conflict. For example:
+```
+version on file one: 1.0.0
+version on file two: 0.1.0
+resulting version: 0.1.0
+
+version on file one: 0.1.0
+version on file two: 1.0.0
+resulting version: 1.0.0
+```
+The first and last files are the first and second arguments when we call the function, so we can choose what version we want to win when there's a conflict.
+
+
 [1]: https://github.com/nextauthjs/next-auth
 [2]: https://www.prisma.io/
+[3]: https://github.com/zppack/merge-packages
