@@ -27,7 +27,9 @@ const copyExtensionsFiles = async (
         const isArgs = isArgsRegex.test(path);
         const isExtensionFolder =
           isExtensionFolderRegex.test(path) && fs.lstatSync(path).isDirectory();
-        const shouldSkip = isConfig || isArgs || isExtensionFolder;
+        const isTemplate = isTemplateRegex.test(path);
+        const shouldSkip =
+          isConfig || isArgs || isTemplate || isExtensionFolder;
         return !shouldSkip;
       },
     });
