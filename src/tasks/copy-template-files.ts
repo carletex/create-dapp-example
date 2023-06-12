@@ -23,6 +23,10 @@ import { extensionDict } from "../utils/extensions-tree";
 
 const copy = promisify(ncp);
 
+const isTemplateRegex = /\.template\./;
+const isConfigRegex = /config\.(ts|js)/;
+const isArgsRegex = /\.args\./;
+const isExtensionFolderRegex = /extensions$/;
 const copyExtensionsFiles = async (
   { extensions }: Options,
   targetDir: string
@@ -32,7 +36,14 @@ const copyExtensionsFiles = async (
     // copy root files
     await copy(extensionPath, path.join(targetDir), {
       clobber: false,
-      filter: (fileName) => !/config\./.test(fileName),
+      filter: (path) => {
+        const isConfig = isConfigRegex.test(path);
+        const isArgs = isArgsRegex.test(path);
+        const isExtensionFolder =
+          isExtensionFolderRegex.test(path) && fs.lstatSync(path).isDirectory();
+        const shouldSkip = isConfig || isArgs || isExtensionFolder;
+        return !shouldSkip;
+      },
     });
 
     // merge root package.json
