@@ -1,5 +1,8 @@
-const aTemplate = ({ namedArgument }) => `
-# A Template
+import { withDefaults } from "../utils.js";
+
+// prettier-ignore
+const baseTemplate = ({ namedArgument }) =>
+`# A Template
 This is an example file in the base directory.
 
 The goal of this file is to illustrate how templates work.
@@ -18,6 +21,8 @@ Therefore the signature should always be \`(Record<string, string>) => string\`
 
 Since this file is itself a Template File, any other extension should be able to write below:
 \`\`\`
-${namedArgument}
+${namedArgument.join("\n")}
 \`\`\`
 `;
+
+export default withDefaults(baseTemplate, ["namedArgument"]);
