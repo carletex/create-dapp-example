@@ -63,17 +63,80 @@ A Template file is a file to which extensions can add content. Removing content 
 
 ## Template files API
 ### Template file name
-All Template file should be named as \`{originalName.withExtension}.template.js\`. This way we can skip those files while copying base and extensions, and process them with the values from the base and the combined extensions.
+All Template file should be named as \`{original-name.with-extension}.template.js\`. This way we can skip those files while copying base and extensions, and process them with the values from the base and the combined extensions.
 
 ### Template file contents
 All Template files should export default a function receiving named arguments and returning a string where those input arguments can be used to do string interpolation.
 
-Therefore the signature should always be \`(Record<string, string>) => string\`
+Given multiple extensions can write to the same templates, each of the name argument should expect to receive an array of strings. Note the array might potentially be empty, which would mean no extension is adding values to that template.
+
+The values from each file writing to the template are placed in the array in the same order the user selected the extensions. This effectively means nested extensions write last.
+
+Therefore the signature should always be \`(Record<string, string[]>) => string\`
+
+Also, receiving an array instead of strings give the template itself more control over the final output. Like how the different values should be joined.
+
+Important to note that named arguments could use any arbitrary name. Because of that, we have to provide default values to all those arguments, otherwise missing values would be parsed as the string "undefined". Because we don't know what are the expected names for each template expects.
+
+## Things to note about Template files
+### Default values
+It's a bit annoying having to define an empty array as a default value for all the arguments. To solve this, I've created a utility function that receives the template and expected arguments, and takes care of it.
+
+### Unwanted new lines
+Note when you use backticks, "`", to create interpolated strings, new lines are taken as part of the string. Therefore the following string would start and end with extra empty lines:
+```ts
+const stringWithNewLines = `
+woops, there are new lines
+`
+```
+
+You can do the following:
+```ts
+const stringWithoutNewLines =
+`This string starts without a new line
+and ends without new lines`
+```
+
+If you do this, however, prettier will try to indent the backtick. To avoid that you can see I've added a bunch of `// prettier-ignore`s before the template strings.
+
+# Args files
+Args files are the files used to add content to Template files.
+
+## Args files API
+### Args file name
+All Args files should be named as \`{original-name.with-extension}.args.js\`. This way we can check, for a given Template file, if any Args files exist.
+
+Important to note here that the relative path of the Template and Args files **must** be the same. Otherwise the Args file content won't be used. By relative path I mean the path relative to the `base/` path or the `extensions/{extension-name}/` paths. An example:
+```
+create-dapp-example/
+├─ ...
+│
+├─ templates/
+│  ├─ base/
+│  │  ├─ some-folder/
+│  │  │  ├─ template-at-folder.md.template.js
+│  │  ├─ template-at-root.md.template.js
+│  │
+│  ├─ extensions/
+│  │  ├─ foo/
+│  │  │  ├─ some-folder/
+│  │  │  │  ├─ template-at-root.md.template.js <-- won't work!
+│  │  │  │  ├─ template-at-folder.md.template.js
+│  │  │  ├─ template-at-root.md.template.js
+│  │  │  ├─ template-at-folder.md.template.js <-- won't work!
+```
+
+### Args file content
+
+# Args files injection in Template files
+For each Template file, we search on the extensions the user selected for the existence of Args files in the exact same relative path. If there are multiple Args files, we combine them into an array
+
+I've thought about how the strings should be joined, but an option is to use [tagged templates](4). We can go as crazy as we want with tagged templates.
 
 # Extension folder anatomy
 TODO write this section
 
-# Things to be aware of
+# Things worth mentioning
 ## Merging package.json files
 The package we use to merge package.json files [merge-packages](3) will use the last version of a dependency given a conflict. For example:
 ```
@@ -87,7 +150,11 @@ resulting version: 1.0.0
 ```
 The first and last files are the first and second arguments when we call the function, so we can choose what version we want to win when there's a conflict.
 
+## Filesystem async methods
+This is a possible improvement in the speed of the cli. I've used the sync API to avoid adding extra complexity for the proof of concept, but it might be an improvement helping parallelize tasks. For example processing templates in parallel.
+
 
 [1]: https://github.com/nextauthjs/next-auth
 [2]: https://www.prisma.io/
 [3]: https://github.com/zppack/merge-packages
+[4]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals#tagged_templates

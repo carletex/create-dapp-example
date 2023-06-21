@@ -1,18 +1,20 @@
-import { Options } from "../types";
-import fs, { stat } from "fs";
+import { Options, TemplateDescriptor } from "../types";
+import fs from "fs";
 import ncp from "ncp";
 import path from "path";
 import { promisify } from "util";
 import { baseDir } from "../utils/consts";
 import { mergePackageJson } from "../utils/merge-pacakge-json";
 import { extensionDict } from "../utils/extensions-tree";
+import { findFilesRecursiveSync } from "../utils/find-files-recursively";
 
 const copy = promisify(ncp);
 
-const isTemplateRegex = /\.template\./;
+const isTemplateRegex = /([^\/\\]*?)\.template\./;
 const isConfigRegex = /config\.(ts|js)/;
-const isArgsRegex = /\.args\./;
+const isArgsRegex = /([^\/\\]*?)\.args\./;
 const isExtensionFolderRegex = /extensions$/;
+const isPackagesFolderRegex = /packages$/;
 const copyExtensionsFiles = async (
   { extensions }: Options,
   targetDir: string
@@ -27,9 +29,15 @@ const copyExtensionsFiles = async (
         const isArgs = isArgsRegex.test(path);
         const isExtensionFolder =
           isExtensionFolderRegex.test(path) && fs.lstatSync(path).isDirectory();
+        const isPackagesFolder =
+          isPackagesFolderRegex.test(path) && fs.lstatSync(path).isDirectory();
         const isTemplate = isTemplateRegex.test(path);
         const shouldSkip =
-          isConfig || isArgs || isTemplate || isExtensionFolder;
+          isConfig ||
+          isArgs ||
+          isTemplate ||
+          isExtensionFolder ||
+          isPackagesFolder;
         return !shouldSkip;
       },
     });
@@ -46,6 +54,13 @@ const copyExtensionsFiles = async (
       // copy extension packages files
       await copy(extensionPackagesPath, path.join(targetDir, "packages"), {
         clobber: false,
+        filter: (path) => {
+          const isArgs = isArgsRegex.test(path);
+          const isTemplate = isTemplateRegex.test(path);
+          const shouldSkip = isArgs || isTemplate;
+
+          return !shouldSkip;
+        },
       });
 
       // copy each package's package.json
@@ -58,6 +73,103 @@ const copyExtensionsFiles = async (
       });
     }
   });
+};
+
+const processTemplatedFiles = async (
+  { extensions }: Options,
+  basePath: string,
+  targetDir: string
+) => {
+  const baseTemplatedFileDescriptors: TemplateDescriptor[] =
+    findFilesRecursiveSync(basePath, (path) => isTemplateRegex.test(path)).map(
+      (baseTemplatePath) => ({
+        path: baseTemplatePath,
+        relativePath: baseTemplatePath.split(basePath)[1],
+        source: "base",
+      })
+    );
+
+  const extensionsTemplatedFileDescriptors: TemplateDescriptor[] = extensions
+    .map((ext) =>
+      findFilesRecursiveSync(extensionDict[ext].path, (filePath) =>
+        isTemplateRegex.test(filePath)
+      ).map((extensionTemplatePath) => ({
+        path: extensionTemplatePath,
+        relativePath: extensionTemplatePath.split(extensionDict[ext].path)[1],
+        source: `extension ${extensionDict[ext].name}`,
+      }))
+    )
+    .flat();
+
+  await Promise.all(
+    [
+      ...baseTemplatedFileDescriptors,
+      ...extensionsTemplatedFileDescriptors,
+    ].map(async (templateFileDescriptor) => {
+      const templateTargetName =
+        templateFileDescriptor.path.match(isTemplateRegex)?.[1]!;
+
+      const argsPath = templateFileDescriptor.relativePath.replace(
+        isTemplateRegex,
+        `${templateTargetName}.args.`
+      );
+
+      const argsFilesPath = extensions
+        .map((extension) => {
+          const argsFilePath = path.join(
+            extensionDict[extension].path,
+            argsPath
+          );
+          const fileExists = fs.existsSync(argsFilePath);
+          if (!fileExists) {
+            return [];
+          }
+          return argsFilePath;
+        })
+        .flat();
+
+      const args = await Promise.all(
+        argsFilesPath.map(async (argsFilePath) => await import(argsFilePath))
+      );
+      const template = (await import(templateFileDescriptor.path)).default;
+
+      if (!template) {
+        throw new Error(
+          `Template ${templateTargetName} from ${templateFileDescriptor.source} doesn't have a default export`
+        );
+      }
+      if (typeof template !== "function") {
+        throw new Error(
+          `Template ${templateTargetName} from ${templateFileDescriptor.source} is not exporting a function by default`
+        );
+      }
+
+      const freshArgs: { [key: string]: string[] } = Object.fromEntries(
+        Object.keys(args[0] ?? {}).map((key) => [
+          key, // INFO: key for the freshArgs object
+          [], // INFO: initial value for the freshArgs object
+        ])
+      );
+      const combinedArgs: { [key: string]: string[] } = args.reduce(
+        (accumulated, arg) => {
+          Object.entries(arg).map(([key, value]) => {
+            accumulated[key].push(value);
+          });
+          return accumulated;
+        },
+        freshArgs
+      );
+
+      const output = template(combinedArgs);
+
+      const targetPath = path.join(
+        targetDir,
+        templateFileDescriptor.relativePath.split(templateTargetName)[0],
+        templateTargetName
+      );
+      fs.writeFileSync(targetPath, output);
+    })
+  );
 };
 
 export async function copyTemplateFiles(
@@ -74,4 +186,7 @@ export async function copyTemplateFiles(
 
   // 2. Copy extensions folders
   copyExtensionsFiles(options, targetDir);
+
+  // 3. Process templated files and generate output
+  processTemplatedFiles(options, basePath, targetDir);
 }

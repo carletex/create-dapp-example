@@ -86,3 +86,9 @@ export const extensionIsBranch = (
 ): extension is ExtensionBranch => {
   return Object.prototype.hasOwnProperty.call(extension, "extensions");
 };
+
+export type TemplateDescriptor = {
+  path: string;
+  relativePath: string;
+  source: string;
+};
