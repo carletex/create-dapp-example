@@ -72,7 +72,7 @@ Given multiple extensions can write to the same templates, each of the name argu
 
 The values from each file writing to the template are placed in the array in the same order the user selected the extensions. This effectively means nested extensions write last.
 
-Therefore the signature should always be \`(Record<string, string[]>) => string\`
+Therefore the exported function signature should always be \`(Record<string, string[]>) => string\`
 
 Also, receiving an array instead of strings give the template itself more control over the final output. Like how the different values should be joined.
 
@@ -80,7 +80,7 @@ Important to note that named arguments could use any arbitrary name. Because of 
 
 ## Things to note about Template files
 ### Default values
-It's a bit annoying having to define an empty array as a default value for all the arguments. To solve this, I've created a utility function that receives the template and expected arguments, and takes care of it.
+It's a bit annoying having to define an empty array as a default value for all the arguments. To solve this, I've created a utility function that receives the template and expected arguments, and takes care of it. You can find it at `templates/utils.js`, the function named `withDefaults`
 
 ### Unwanted new lines
 Note when you use backticks, "`", to create interpolated strings, new lines are taken as part of the string. Therefore the following string would start and end with extra empty lines:
