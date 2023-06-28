@@ -72,6 +72,7 @@ export type ExtensionDescriptor = {
   value: string;
   path: string;
   extensions?: Extension[];
+  extends?: Extension;
 };
 export type ExtensionBranch = ExtensionDescriptor & {
   extensions: Extension[];

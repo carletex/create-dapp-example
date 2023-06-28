@@ -30,22 +30,22 @@ const traverseExtensions = async (basePath: string): Promise<Extension[]> => {
   await Promise.all(
     extensions.map(async (ext) => {
       const extPath = path.resolve(extensionsPath, ext);
-      const configFile = fs
-        .readdirSync(extPath)
-        .find((fileOrFolder) => /^config\.(js|ts)$/.test(fileOrFolder));
-      let name = ext;
-      let value = ext;
-      if (configFile) {
-        const extConfigPath = path.resolve(extPath, configFile);
-        const extConfig = await import(extConfigPath).catch((err) => {
-          console.log("importing", extConfigPath);
-          if ((err.code = "ERR_MODULE_NOT_FOUND")) {
-            console.log(err);
-          }
-        });
-        name = extConfig.name ?? ext;
-        value = extConfig.value ?? ext;
+      const configPath = path.resolve(extPath, "config.json");
+
+      let config: Record<string, string> = {};
+      try {
+        config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+      } catch (error) {
+        if (fs.existsSync(configPath)) {
+          throw new Error(
+            `Couldn't parse existing config.json file.
+  Extension: ${ext};
+  Config file path: ${configPath}`
+          );
+        }
       }
+      let name = config.name ?? ext;
+      let value = ext;
 
       const subExtensions = await traverseExtensions(extPath);
       const hasSubExtensions = subExtensions.length !== 0;
@@ -54,6 +54,7 @@ const traverseExtensions = async (basePath: string): Promise<Extension[]> => {
         value,
         path: extPath,
         extensions: subExtensions,
+        extends: config.extends as Extension | undefined,
       };
       if (!hasSubExtensions) {
         delete extDescriptor.extensions;

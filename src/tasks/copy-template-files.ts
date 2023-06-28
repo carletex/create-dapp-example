@@ -11,7 +11,7 @@ import { findFilesRecursiveSync } from "../utils/find-files-recursively";
 const copy = promisify(ncp);
 
 const isTemplateRegex = /([^\/\\]*?)\.template\./;
-const isConfigRegex = /config\.(ts|js)/;
+const isConfigRegex = /config.json/;
 const isArgsRegex = /([^\/\\]*?)\.args\./;
 const isExtensionFolderRegex = /extensions$/;
 const isPackagesFolderRegex = /packages$/;

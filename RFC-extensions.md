@@ -1,10 +1,13 @@
+# Main concepts
 I propose we treat anything other than "base" as an extension. That way we don't need to make distinctions between solidity frameworks or any other kind of extension.
 
 This change should make it easier to grow the options we provide our users without having to classify extensions by category.
 
 This change requires a new file, `src/config.ts`, where a few things about the extensions are defined, e.g. the sequence of questions about extensions.
 
-In this way, we can add extensions of extensions, just by adding an `/extensions` folder inside an existing extension. For example, adding [next-auth][1] as an extension for next would look something like the following:
+## Nested extensions
+
+We can add extensions of extensions, just by adding an `/extensions` folder inside an existing extension. For example, adding [next-auth][1] as an extension for next would look something like the following:
 
 ```text
 create-dapp-example/
@@ -21,42 +24,67 @@ create-dapp-example/
 │  │  │  ├─ ...
 ```
 
+## Extending extensions
+> sorry for the confusing naming
+
+Extensions can also inherit (or extend) another extension. The goal of this feature is that two extensions can share files or nested extensions without duplication. An example of this could be hardhat and foundry, which are two different extensions, but both of them could have a shared UI to debug smart contracts.
+
+The file structure could be like this:
+```text
+create-dapp-example/
+├─ src/
+│  ├─ ...
+│
+├─ templates/
+│  ├─ base/
+│  ├─ extensions/
+│  │  ├─ foundry/
+│  │  │  ├─ config.json <- important to declare the `extends` field here
+│  │  │  ├─ ...
+│  │  ├─ hardhat/
+│  │  │  ├─ config.json <- important to declare the `extends` field here
+│  │  │  ├─ ...
+│  │  ├─ common/
+│  │  │  ├─ extensions/
+│  │  │  │  ├─ possible-shared-nested-extension/
+│  │  │  │  ├─ ...
+│  │  │  ├─ shared-file.md
+```
+For `foundry` and `hardhat` extensions to inherit from `common`, they need to add the `extends` field to the config.json file.
+
+```json
+{
+  "extends": "common"
+}
+```
+
 # Config files
 There's one main `src/config.ts` file to configure the questions shown to the user.
 
-For each extension there is an optional `templates/extensions/{extensionName}/config.js` file providing information about the specific extension.
+For each extension there is an optional `templates/extensions/{extensionName}/config.json` file providing information about the specific extension.
 
-| ⚠️ Note how the extension config file is a JavaScript file, not TS!
+| ⚠️ Note how the extension config file is a JSON file
 
-The reason we need to use .js files for these is because those files are imported at runtime by the node executable.
 
 ## Config files API
 ### `src/config.ts`
 Have a look at `src/types.ts#Config`
 
-### `{extension}/config.*`
-Since these files can't be .ts (for now, see [Possible improvements](#possible-improvements)), the API is not typed.
+### `{extension}/config.json`
+Since these files can't be .ts, the API is not typed. However, there are certain properties that are used in the code.
 
-The values that can be exported from these files are:
+Those properties are:
  - `name`: the string to be used when showing the package name to the user via the cli
 
-| Note that all values are optional, as well as the file itself.
+ - `extends`: the name of a different extension used as "parent extension". Read more at the [Extending extensions](#extending-extensions) section
 
-## Possible improvements
+Note that all values are optional, as well as the file itself.
 
-### Use .json files
-self explanatory
+| ⚠️ TODO list when new properties are added to config.json:
+|  - Update this document
+|  - Update the ExtensionDescriptor type at /src/types.ts
+|  - Update the extensions-tree file so the new field from the config is actually added into the extension descriptor
 
-### Use .ts files
-One option to investigate is using ts-node. I haven't done any research on this path, but it might be an interesting option.
-
-Another alternative to use .ts files is to add a step during compile time where we traverse the `templates/` folder and generate types and the extension tree.
-
-In that scenario I imagine someone would add a new extension by adding a folder within `templates/` with the optional `config.ts` file. Then run a script like `yarn update-extensions`, which does the traverse generating two files:
- - `src/extension-types.ts` with the right types
- - `src/utils/extension-tree.ts` with the tree ready to export without having to traverse the filesystem during runtime.
-
-I've seen this approach being used in [Prisma](2).
 
 # Template files
 A Template file is a file to which extensions can add content. Removing content is out of scope for this experiment.
