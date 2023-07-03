@@ -81,8 +81,7 @@ export type ExtensionDict = {
   [extension in Extension]: ExtensionDescriptor;
 };
 
-// TODO maybe rename this
-export const extensionIsBranch = (
+export const extensionWithSubextensions = (
   extension: ExtensionDescriptor | undefined
 ): extension is ExtensionBranch => {
   return Object.prototype.hasOwnProperty.call(extension, "extensions");

@@ -65,7 +65,6 @@ For each extension there is an optional `templates/extensions/{extensionName}/co
 
 | ⚠️ Note how the extension config file is a JSON file
 
-
 ## Config files API
 ### `src/config.ts`
 Have a look at `src/types.ts#Config`
@@ -74,7 +73,7 @@ Have a look at `src/types.ts#Config`
 Since these files can't be .ts, the API is not typed. However, there are certain properties that are used in the code.
 
 Those properties are:
- - `name`: the string to be used when showing the package name to the user via the cli
+ - `name`: the string to be used when showing the package name to the user via the cli, as well as for error reporting.
 
  - `extends`: the name of a different extension used as "parent extension". Read more at the [Extending extensions](#extending-extensions) section
 
@@ -85,7 +84,6 @@ Note that all values are optional, as well as the file itself.
 |  - Update the ExtensionDescriptor type at /src/types.ts
 |  - Update the src/utils/extensions-tree.ts file so the new field from the config is actually added into the extension descriptor
 
-
 # Template files
 A Template file is a file to which extensions can add content. Removing content is out of scope for this experiment.
 
@@ -94,13 +92,13 @@ A Template file is a file to which extensions can add content. Removing content 
 All Template file should be named as \`{original-name.with-extension}.template.js\`. This way we can skip those files while copying base and extensions, and process them with the values from the base and the combined extensions.
 
 ### Template file contents
-All Template files should export default a function receiving named arguments and returning a string where those input arguments can be used to do string interpolation.
+All Template files should `export default` a function receiving named arguments and returning a string where those input arguments can be used to do string interpolation.
 
 Given multiple extensions can write to the same templates, each of the name argument should expect to receive an array of strings. Note the array might potentially be empty, which would mean no extension is adding values to that template.
 
-The values from each file writing to the template are placed in the array in the same order the user selected the extensions. This effectively means nested extensions write last.
-
 Therefore the exported function signature should always be \`(Record<string, string[]>) => string\`
+
+The values from each file writing to the template are placed in the array in the same order the user selected the extensions. This effectively means nested extensions write last.
 
 Also, receiving an array instead of strings give the template itself more control over the final output. Like how the different values should be joined.
 
@@ -108,7 +106,9 @@ Important to note that named arguments could use any arbitrary name. Because of 
 
 ## Things to note about Template files
 ### Default values
-It's a bit annoying having to define an empty array as a default value for all the arguments. To solve this, I've created a utility function that receives the template and expected arguments, and takes care of it. You can find it at `templates/utils.js`, the function named `withDefaults`
+It's a bit annoying having to define an empty array as a default value for all the arguments. To solve this, I've created a utility function that receives the template and expected arguments, and takes care of it. You can find it at `templates/utils.js`, the function named `withDefaults`.
+
+As a bonus, using this function will throw an error when an [Args file](#args-file-content) is trying to send an argument with a name not expected by the template.
 
 ### Unwanted new lines
 Note when you use backticks, "`", to create interpolated strings, new lines are taken as part of the string. Therefore the following string would start and end with extra empty lines:
@@ -155,6 +155,19 @@ create-dapp-example/
 ```
 
 ### Args file content
+Args files should export an object with key-value pairs where keys are the named argument of the template, and the values are the content you want to send for the given named argument.
+
+This can be accomplished by using named exports instead of explicitly defining the object.
+```js
+// this
+export one = 1
+export two = 2
+
+// would be equivalent to
+export default { one: 1, two: 2}
+```
+
+To avoid issues when named arguments have typos, the `withDefaults` utility will also throw an error when an argument is passed with a name that wasn't expected by the template.
 
 # Args files injection in Template files
 For each Template file, we search on the extensions the user selected for the existence of Args files in the exact same relative path. If there are multiple Args files, we combine them into an array
@@ -162,7 +175,24 @@ For each Template file, we search on the extensions the user selected for the ex
 I've thought about how the strings should be joined, but an option is to use [tagged templates](4). We can go as crazy as we want with tagged templates.
 
 # Extension folder anatomy
-TODO write this section
+When creating a new extension, simply create a new folder under `templates/extensions` with the name you want the extension to have.
+
+Inside the folder you will have a mix of normal, templated, and special files and folders.
+
+## Normal files and folders
+These are the untouched files and folders you want the extension to add to the final project.
+In the case of files, they will be copied to the resulting project and no other extension will be able to touch them.
+For folders, they will create the folder with its contents, and other extension will be able to add new files to it.
+Templated files can be nested within normal folders to keep the same path in the resulting project.
+
+## Templated files
+Templated files are both [Template files](#template-files), and [Args files](#args-files). We use them to write to other files already added by the base project or another extension, or to let other extensions modify a file created by this extension. Just to recap, those files are the ones ending in `*.template.js` (Template file) or `*.args.js` (Args file).
+
+## Special files and folders
+The special files and folders are:
+ - [`package.json` file](#merging-packagejson-files)
+ - [`config.json` file](#extensionconfigjson)
+ - [`extensions/` folder](#nested-extensions)
 
 # Things worth mentioning
 ## Merging package.json files

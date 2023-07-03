@@ -46,17 +46,16 @@ Get Rollup watching for changes:
 yarn dev
 ```
 
-Edit file as you want. When you want to run the cli tool, just do:
+Edit files as you want. When you want to run the cli tool, just do:
 ```bash
 yarn cli
 ```
 
-If you're iterating, running the cli multiple times, but want to avoid doing the test folder cleanup manually, there's a shortcut script:
+This script automatically deletes the `test/` folder. Therefore, a convenient command to run for iterating without having to manually delete folders would be:
 ```bash
-yarn cli-dry
-# same as `yarn cli test --skip` & `rm -rf test`
+yarn cli test -s
 ```
-This script does a dry run, creating a `test/` folder for the cli output, and automatically skipping modules install. When it's done, it deletes the `test/` folder.
+Which generates the output in the `test/` folder and skips installing dependencies. That `test/` folder would then be deleted in the following `yarn cli` run.
 
 **Option 2.** Build & npx
 

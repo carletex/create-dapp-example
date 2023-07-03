@@ -4,7 +4,7 @@ import {
   ExtensionDescriptor,
   Options,
   RawOptions,
-  extensionIsBranch,
+  extensionWithSubextensions,
   isDefined,
 } from "../types";
 import inquirer, { Answers } from "inquirer";
@@ -39,7 +39,7 @@ export async function promptForMissingOptions(
     extensions: ExtensionDescriptor[],
     relatedQuestion: string
   ) => {
-    extensions.filter(extensionIsBranch).forEach((ext) => {
+    extensions.filter(extensionWithSubextensions).forEach((ext) => {
       const nestedExtensions = ext.extensions.map(
         (nestedExt) => extensionDict[nestedExt]
       );
