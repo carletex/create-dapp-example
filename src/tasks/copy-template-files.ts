@@ -1,4 +1,4 @@
-import { Options, TemplateDescriptor } from "../types";
+import { Extension, Options, TemplateDescriptor, isDefined } from "../types";
 import fs from "fs";
 import ncp from "ncp";
 import path from "path";
@@ -9,6 +9,20 @@ import { extensionDict } from "../utils/extensions-tree";
 import { findFilesRecursiveSync } from "../utils/find-files-recursively";
 
 const copy = promisify(ncp);
+
+const expandExtensions = (options: Options): Extension[] => {
+  const expandedExtensions = options.extensions
+    .map((extension) => extensionDict[extension])
+    .map((extDescriptor) => [extDescriptor.extends, extDescriptor.value].filter(isDefined)
+    )
+    .flat()
+    // this reduce just removes duplications
+    .reduce((exts, ext) =>
+      exts.includes(ext) ? exts : [...exts, ext]
+    , [] as Extension[]);
+
+  return expandedExtensions
+};
 
 const isTemplateRegex = /([^\/\\]*?)\.template\./;
 const isConfigRegex = /config.json/;
@@ -184,9 +198,13 @@ export async function copyTemplateFiles(
     filter: (fileName) => !isTemplateRegex.test(fileName), // NOTE: filter IN
   });
 
-  // 2. Copy extensions folders
+  // 2. Add "parent" extensions (set via config.json#extend field)
+  const expandedExtension = expandExtensions(options);
+  options.extensions = expandedExtension
+
+  // 3. Copy extensions folders
   copyExtensionsFiles(options, targetDir);
 
-  // 3. Process templated files and generate output
+  // 4. Process templated files and generate output
   processTemplatedFiles(options, basePath, targetDir);
 }

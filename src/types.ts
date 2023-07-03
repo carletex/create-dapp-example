@@ -69,7 +69,7 @@ export const isDefined = <T>(item: T | undefined | null): item is T =>
 
 export type ExtensionDescriptor = {
   name: string;
-  value: string;
+  value: Extension;
   path: string;
   extensions?: Extension[];
   extends?: Extension;

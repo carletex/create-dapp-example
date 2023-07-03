@@ -83,7 +83,7 @@ Note that all values are optional, as well as the file itself.
 | ⚠️ TODO list when new properties are added to config.json:
 |  - Update this document
 |  - Update the ExtensionDescriptor type at /src/types.ts
-|  - Update the extensions-tree file so the new field from the config is actually added into the extension descriptor
+|  - Update the src/utils/extensions-tree.ts file so the new field from the config is actually added into the extension descriptor
 
 
 # Template files
