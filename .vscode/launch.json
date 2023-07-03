@@ -9,8 +9,9 @@
       "request": "launch",
       "name": "Debug CLI",
       "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "remove-test-folder",
       "program": "${workspaceFolder}/bin/create-dapp-se2.js",
-      "args": ["z", "-s"],
+      "args": ["test", "-s"],
       "outFiles": ["${workspaceFolder}/dist/cli.js"],
       "console": "integratedTerminal",
       "sourceMaps": true
