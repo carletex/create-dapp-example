@@ -1,11 +1,8 @@
 import type { Question } from "inquirer";
 
-export const smartContractFrameworks = ["hardhat", "none"] as const;
 export const availableExtensions = ["graph", "none"] as const;
 
 export type Args = string[];
-
-export type Template = (typeof smartContractFrameworks)[number];
 
 export type Extensions = (typeof availableExtensions)[number];
 
