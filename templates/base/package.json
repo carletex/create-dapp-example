@@ -1,23 +1,30 @@
 {
-  "name": "base",
-  "version": "0.0.3",
-  "description": "This is the root package.json file coming from the base template",
-  "main": "dist/cli.js",
-  "type": "module",
+  "name": "se-2",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "conflicting-script": "echo \"Conflicting script created from base\"",
-    "base-script": "echo \"Non-conflicting script created from a1-root-package\""
+    "prepare": "install-self-peers -- --ignore-scripts",
+    "start": "yarn workspace @se-2/nextjs dev",
+    "next:lint": "yarn workspace @se-2/nextjs lint",
+    "next:format": "yarn workspace @se-2/nextjs format",
+    "next:check-types": "yarn workspace @se-2/nextjs check-types",
+    "postinstall": "husky install",
+    "precommit": "lint-staged",
+    "vercel": "yarn workspace @se-2/nextjs vercel",
+    "vercel:yolo": "yarn workspace @se-2/nextjs vercel:yolo"
   },
-  "author": "Daniel Gonzalez Reina <dangonrei@gmail.com>",
-  "license": "MIT",
+  "packageManager": "yarn@3.2.3",
   "devDependencies": {
-    "base-dev-dependency-global": "1.0.0",
-    "global-dev-dependency-conflict": "1.0.0"
+    "@team-griffin/install-self-peers": "^1.1.1",
+    "husky": "8.0.3",
+    "lint-staged": "13.2.2"
   },
-  "dependencies": {
-    "base-dependency-global": "1.0.0",
-    "global-dependency-conflict": "1.0.0"
-  },
-  "packageManager": "yarn@3.5.0"
+  "resolutions": {
+    "usehooks-ts@^2.7.2": "patch:usehooks-ts@npm:^2.7.2#./.yarn/patches/usehooks-ts-npm-2.7.2-fceffe0e43.patch"
+  }
 }

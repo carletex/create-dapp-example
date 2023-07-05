@@ -32,9 +32,16 @@ export type HandleBarTemplateOptions = Options & {
   _appProvidersClosingTags: string[];
 };
 
-export type Extension = "a1" | "a2" | "a3" | "b" | "c" | "d" | "b-extension";
-type NullExtension = null
-export type ExtensionOrNull = Extension | NullExtension
+export type Extension =
+  | "hardhat"
+  | "foundry"
+  | "a3"
+  | "b"
+  | "c"
+  | "d"
+  | "b-extension";
+type NullExtension = null;
+export type ExtensionOrNull = Extension | NullExtension;
 // corresponds to inquirer question types:
 //  - multi-select -> checkbox
 //  - single-select -> list

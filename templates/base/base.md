@@ -1,1 +1,0 @@
-This is an example of a file that won't be changed by extensions

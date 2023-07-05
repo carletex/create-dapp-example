@@ -4,16 +4,10 @@ const config: Config = {
   questions: [
     typedQuestion({
       type: "single-select",
-      name: "a",
-      message: "Select library for A",
-      extensions: ["a1", "a2", null],
-      default: "a2",
-    }),
-    typedQuestion({
-      type: "multi-select",
-      name: "optional",
-      message: "Select optional extensions",
-      extensions: ["b", "c", "d"],
+      name: "solidity-framework",
+      message: "What solidity framework do you want to use?",
+      extensions: ["hardhat", "foundry", null],
+      default: "hardhat",
     }),
   ],
 };
