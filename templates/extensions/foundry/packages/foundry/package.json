@@ -16,8 +16,8 @@
     "@types/prettier": "2"
   },
   "dependencies": {
-    "envfile": "6.18.0",
-    "ethers": "5.7.1",
-    "prettier": "2.8.8"
+    "envfile": "~6.18.0",
+    "ethers": "~5.7.1",
+    "prettier": "~2.8.8"
   }
 }
