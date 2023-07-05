@@ -1,48 +1,36 @@
 import type { Args, RawOptions } from "../types";
-import { smartContractFrameworks } from "../types";
-import { checkValidSmartContractFramework } from "./check-valid-smart-contract-framework";
 import arg from "arg";
-import chalk from "chalk";
 
-export function parseArgumentsIntoOptions(
-  rawArgs: Args
-): Omit<RawOptions, "extensions"> {
+// TODO update smartContractFramework code with general extensions
+export function parseArgumentsIntoOptions(rawArgs: Args): RawOptions {
   const args = arg(
     {
       "--install": Boolean,
       "-i": "--install",
+
+      "--skip-install": Boolean,
+      "--skip": "--skip-install",
+      "-s": "--skip-install",
+
       "--smartContractFramework": String,
-      "-scf": "--smartContractFramework",
+      "-f": "--smartContractFramework",
     },
     {
-      argv: rawArgs.slice(2),
+      argv: rawArgs.slice(2).map((a) => a.toLowerCase()),
     }
   );
 
-  const smartContractFramework =
-    args["--smartContractFramework"]?.toLowerCase();
-  const isTemplateValid = checkValidSmartContractFramework(
-    smartContractFramework
-  );
+  const install = args["--install"] ?? null;
 
-  if (!isTemplateValid) {
-    console.log(
-      `%s You passed incorrect template: ${
-        args["--smartContractFramework"]
-      }. List of supported smart contract frameworks: ${smartContractFrameworks.join(
-        ", "
-      )}`,
-      chalk.yellow.bold("WARNING")
-    );
-  }
+  const skipInstall = args["--skip-install"] ?? null;
 
-  const project = args._[0]?.toLowerCase();
+  const hasInstallRelatedFlag = install || skipInstall;
+
+  const project = args._[0] ?? null;
 
   return {
     project,
-    install: args["--install"] || false,
-    smartContractFramework: isTemplateValid
-      ? smartContractFramework
-      : undefined,
+    install: hasInstallRelatedFlag ? install || !skipInstall : null,
+    extensions: null, // TODO add extensions flags
   };
 }

@@ -1,0 +1,26 @@
+{
+  "name": "a1-root-package",
+  "version": "0.0.3",
+  "description": "This is the root package.json file coming from the extension A1 This is the root package.json file coming from the base_test template",
+  "license": "MIT",
+  "author": "Daniel Gonzalez Reina <dangonrei@gmail.com>",
+  "type": "module",
+  "main": "dist/cli.js",
+  "scripts": {
+    "a1-script": "echo \"Non-conflicting script created from a1-root-package\"",
+    "base_test-script": "echo \"Non-conflicting script created from a1-root-package\"",
+    "conflicting-script": "echo \"Conflicting script created from base_test\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "a1-dependency-global": "1.0.0",
+    "base_test-dependency-global": "1.0.0",
+    "global-dependency-conflict": "0.1.0"
+  },
+  "devDependencies": {
+    "a1-dev-dependency-global": "1.0.0",
+    "base_test-dev-dependency-global": "1.0.0",
+    "global-dev-dependency-conflict": "0.1.0"
+  },
+  "packageManager": "yarn@3.5.0"
+}

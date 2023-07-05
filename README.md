@@ -39,13 +39,31 @@ git clone https://github.com/carletex/create-dapp-example
 cd create-dapp-example
 ```
 
-**Option 1.** Build & npx
+**Option 1.** Dev & cli
+
+Get Rollup watching for changes:
+```bash
+yarn dev
+```
+
+Edit files as you want. When you want to run the cli tool, just do:
+```bash
+yarn cli
+```
+
+This script automatically deletes the `test/` folder. Therefore, a convenient command to run for iterating without having to manually delete folders would be:
+```bash
+yarn cli test -s
+```
+Which generates the output in the `test/` folder and skips installing dependencies. That `test/` folder would then be deleted in the following `yarn cli` run.
+
+**Option 2.** Build & npx
 
 ```bash
 yarn build && npx .
 ```
 
-**Option 2.** Linking package locally and running watch mode:
+**Option 3.** Linking package locally and running watch mode:
 
 ```bash
 # Make sure you are in create-dapp-se2 directory

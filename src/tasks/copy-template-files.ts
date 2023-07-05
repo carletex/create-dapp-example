@@ -1,154 +1,190 @@
-import {
-  availableExtensions,
-  HandleBarTemplateOptions,
-  Options,
-} from "../types";
-import fs, { stat } from "fs";
-import Handlebars from "handlebars";
+import { Extension, Options, TemplateDescriptor, isDefined } from "../types";
+import fs from "fs";
 import ncp from "ncp";
 import path from "path";
 import { promisify } from "util";
-import {
-  baseDir,
-  extensionsDir,
-  handleBarsTemplateFiles,
-  solidityFrameworksDir,
-} from "../utils/consts";
-import { constructYarnWorkspaces } from "../utils/construct-yarn-workspaces";
-import { constructHandleBarsTargetFilePath } from "../utils/construct-handlebars-target-file-path";
-import { copySolidityFrameWorkDir } from "../utils/copy-solidityFramworks";
+import { baseDir } from "../utils/consts";
 import { mergePackageJson } from "../utils/merge-pacakge-json";
-import { constructAppFile } from "../utils/construct-next-app-file";
+import { extensionDict } from "../utils/extensions-tree";
+import { findFilesRecursiveSync } from "../utils/find-files-recursively";
 
 const copy = promisify(ncp);
 
-// Process template files
-const processAndCopyTemplateFiles = async (
-  options: Options,
-  templateDir: string,
-  targetDir: string
-) => {
-  // Copy non conflicting files
-  if (!options.extensions.includes("none")) {
-    options.extensions.forEach((extension) => {
-      const extensionsBaseDir = path.join(
-        templateDir,
-        extensionsDir,
-        extension
-      );
-      // copy packages dir
-      copy(
-        path.join(extensionsBaseDir, "packages"),
-        path.join(targetDir, "packages"),
-        { clobber: false }
-      );
+const expandExtensions = (options: Options): Extension[] => {
+  const expandedExtensions = options.extensions
+    .map((extension) => extensionDict[extension])
+    .map((extDescriptor) => [extDescriptor.extends, extDescriptor.value].filter(isDefined)
+    )
+    .flat()
+    // this reduce just removes duplications
+    .reduce((exts, ext) =>
+      exts.includes(ext) ? exts : [...exts, ext]
+    , [] as Extension[]);
 
-      const extensionNextjsDir = path.join(extensionsBaseDir, "nextjs");
-
-      const readAllRootFiles = fs.readdirSync(extensionNextjsDir);
-      readAllRootFiles.forEach((name) => {
-        const stats = fs.statSync(path.join(extensionNextjsDir, name));
-        if (stats.isDirectory()) {
-          const targetNextjsDir = path.join(targetDir, "packages", "nextjs");
-          copy(
-            path.join(extensionNextjsDir, name),
-            path.join(targetNextjsDir, name),
-            {
-              clobber: false,
-            }
-          );
-        }
-      });
-    });
-  }
-
-  handleBarsTemplateFiles.forEach((templateFile) => {
-    // eg : templateFile = base/package.json.hbs
-
-    // base/package.json.hbs -> base/package.json
-    const targetFile = templateFile.replace(".hbs", "");
-    const templateFilePath = path.join(templateDir, templateFile);
-
-    const targetFilePath = path.join(
-      targetDir,
-      // targetDir/base/package.json needs to be converted to targetDir/package.json
-      constructHandleBarsTargetFilePath(targetFile)
-    );
-    const templateContent = fs.readFileSync(templateFilePath, "utf8");
-    const template = Handlebars.compile<HandleBarTemplateOptions>(
-      templateContent,
-      {
-        noEscape: true,
-      }
-    );
-
-    const yarnWorkspaces = constructYarnWorkspaces(options, templateDir);
-    const {
-      _appImports,
-      _appOutsideComponentCode,
-      _appProviderWrappers,
-      _appProvidersClosingTags,
-    } = constructAppFile(options, templateDir);
-
-    const result = template({
-      ...options,
-      yarnWorkspaces,
-      _appImports,
-      _appOutsideComponentCode,
-      _appProviderWrappers,
-      _appProvidersClosingTags,
-    });
-
-    fs.writeFileSync(targetFilePath, result, "utf8");
-  });
+  return expandedExtensions
 };
 
-const mergeExtensionsPackageJson = async (
-  options: Options,
-  templateDir: string,
+const isTemplateRegex = /([^\/\\]*?)\.template\./;
+const isConfigRegex = /config.json/;
+const isArgsRegex = /([^\/\\]*?)\.args\./;
+const isExtensionFolderRegex = /extensions$/;
+const isPackagesFolderRegex = /packages$/;
+const copyExtensionsFiles = async (
+  { extensions }: Options,
   targetDir: string
 ) => {
-  if (options.extensions.includes("none")) return;
+  extensions.forEach(async (extension) => {
+    const extensionPath = extensionDict[extension].path;
+    // copy root files
+    await copy(extensionPath, path.join(targetDir), {
+      clobber: false,
+      filter: (path) => {
+        const isConfig = isConfigRegex.test(path);
+        const isArgs = isArgsRegex.test(path);
+        const isExtensionFolder =
+          isExtensionFolderRegex.test(path) && fs.lstatSync(path).isDirectory();
+        const isPackagesFolder =
+          isPackagesFolderRegex.test(path) && fs.lstatSync(path).isDirectory();
+        const isTemplate = isTemplateRegex.test(path);
+        const shouldSkip =
+          isConfig ||
+          isArgs ||
+          isTemplate ||
+          isExtensionFolder ||
+          isPackagesFolder;
+        return !shouldSkip;
+      },
+    });
 
-  options.extensions.forEach((extension) => {
-    // eg : extension = graph
-    // extensionBaseDir = templateDir/extensions/graph
-    const extensionsBaseDir = path.join(templateDir, extensionsDir, extension);
-
-    // merge package.json from extensions nextjs to targetDir nextjs pacakge.json
-    mergePackageJson(
-      path.join(targetDir, "packages", "nextjs", "package.json"),
-      path.join(extensionsBaseDir, "nextjs", "package.json")
-    );
-
-    // merge root pacakge json for scripts of extensions
+    // merge root package.json
     mergePackageJson(
       path.join(targetDir, "package.json"),
-      path.join(extensionsBaseDir, "package.json")
+      path.join(extensionPath, "package.json")
     );
+
+    const extensionPackagesPath = path.join(extensionPath, "packages");
+    const hasPackages = fs.existsSync(extensionPackagesPath);
+    if (hasPackages) {
+      // copy extension packages files
+      await copy(extensionPackagesPath, path.join(targetDir, "packages"), {
+        clobber: false,
+        filter: (path) => {
+          const isArgs = isArgsRegex.test(path);
+          const isTemplate = isTemplateRegex.test(path);
+          const shouldSkip = isArgs || isTemplate;
+
+          return !shouldSkip;
+        },
+      });
+
+      // copy each package's package.json
+      const extensionPackages = fs.readdirSync(extensionPackagesPath);
+      extensionPackages.forEach((packageName) => {
+        mergePackageJson(
+          path.join(targetDir, "packages", packageName, "package.json"),
+          path.join(extensionPath, "packages", packageName, "package.json")
+        );
+      });
+    }
   });
 };
 
-export async function mergeSolidityFrameWorksPackageJson(
-  options: Options,
-  templateDir: string,
+const processTemplatedFiles = async (
+  { extensions }: Options,
+  basePath: string,
   targetDir: string
-) {
-  if (options.smartContractFramework === "none") return;
+) => {
+  const baseTemplatedFileDescriptors: TemplateDescriptor[] =
+    findFilesRecursiveSync(basePath, (path) => isTemplateRegex.test(path)).map(
+      (baseTemplatePath) => ({
+        path: baseTemplatePath,
+        relativePath: baseTemplatePath.split(basePath)[1],
+        source: "base",
+      })
+    );
 
-  // Also merge root package.json for scripts of solidityFrameworks
-  const solidityFrameworkRootPackageJson = path.join(
-    templateDir,
-    solidityFrameworksDir,
-    options.smartContractFramework.toLowerCase(),
-    "package.json"
-  );
+  const extensionsTemplatedFileDescriptors: TemplateDescriptor[] = extensions
+    .map((ext) =>
+      findFilesRecursiveSync(extensionDict[ext].path, (filePath) =>
+        isTemplateRegex.test(filePath)
+      ).map((extensionTemplatePath) => ({
+        path: extensionTemplatePath,
+        relativePath: extensionTemplatePath.split(extensionDict[ext].path)[1],
+        source: `extension ${extensionDict[ext].name}`,
+      }))
+    )
+    .flat();
 
-  mergePackageJson(
-    path.join(targetDir, "package.json"),
-    solidityFrameworkRootPackageJson
+  await Promise.all(
+    [
+      ...baseTemplatedFileDescriptors,
+      ...extensionsTemplatedFileDescriptors,
+    ].map(async (templateFileDescriptor) => {
+      const templateTargetName =
+        templateFileDescriptor.path.match(isTemplateRegex)?.[1]!;
+
+      const argsPath = templateFileDescriptor.relativePath.replace(
+        isTemplateRegex,
+        `${templateTargetName}.args.`
+      );
+
+      const argsFilesPath = extensions
+        .map((extension) => {
+          const argsFilePath = path.join(
+            extensionDict[extension].path,
+            argsPath
+          );
+          const fileExists = fs.existsSync(argsFilePath);
+          if (!fileExists) {
+            return [];
+          }
+          return argsFilePath;
+        })
+        .flat();
+
+      const args = await Promise.all(
+        argsFilesPath.map(async (argsFilePath) => await import(argsFilePath))
+      );
+      const template = (await import(templateFileDescriptor.path)).default;
+
+      if (!template) {
+        throw new Error(
+          `Template ${templateTargetName} from ${templateFileDescriptor.source} doesn't have a default export`
+        );
+      }
+      if (typeof template !== "function") {
+        throw new Error(
+          `Template ${templateTargetName} from ${templateFileDescriptor.source} is not exporting a function by default`
+        );
+      }
+
+      const freshArgs: { [key: string]: string[] } = Object.fromEntries(
+        Object.keys(args[0] ?? {}).map((key) => [
+          key, // INFO: key for the freshArgs object
+          [], // INFO: initial value for the freshArgs object
+        ])
+      );
+      const combinedArgs: { [key: string]: string[] } = args.reduce(
+        (accumulated, arg) => {
+          Object.entries(arg).map(([key, value]) => {
+            accumulated[key].push(value);
+          });
+          return accumulated;
+        },
+        freshArgs
+      );
+
+      const output = template(combinedArgs);
+
+      const targetPath = path.join(
+        targetDir,
+        templateFileDescriptor.relativePath.split(templateTargetName)[0],
+        templateTargetName
+      );
+      fs.writeFileSync(targetPath, output);
+    })
   );
-}
+};
 
 export async function copyTemplateFiles(
   options: Options,
@@ -156,21 +192,19 @@ export async function copyTemplateFiles(
   targetDir: string
 ) {
   // 1. Copy base template to target directory
-  await copy(path.join(templateDir, baseDir), targetDir, {
+  const basePath = path.join(templateDir, baseDir);
+  await copy(basePath, targetDir, {
     clobber: false,
-    filter: (fileName) => {
-      // ignore template files
-      return !fileName.includes(".hbs");
-    },
+    filter: (fileName) => !isTemplateRegex.test(fileName), // NOTE: filter IN
   });
 
-  // 2. Copy smart contract framework folder if selected.(This function only copies non conflicting files like `packages` dir)
-  await copySolidityFrameWorkDir(options, templateDir, targetDir);
+  // 2. Add "parent" extensions (set via config.json#extend field)
+  const expandedExtension = expandExtensions(options);
+  options.extensions = expandedExtension
 
-  // 4. Process template files, depending on enabled extensions
-  await processAndCopyTemplateFiles(options, templateDir, targetDir);
+  // 3. Copy extensions folders
+  copyExtensionsFiles(options, targetDir);
 
-  mergeSolidityFrameWorksPackageJson(options, templateDir, targetDir);
-
-  mergeExtensionsPackageJson(options, templateDir, targetDir);
+  // 4. Process templated files and generate output
+  processTemplatedFiles(options, basePath, targetDir);
 }

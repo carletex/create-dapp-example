@@ -1,15 +1,14 @@
 import { execa } from "execa";
 
-export async function createProjectDirectory(
-  projectDir: string,
-  targetDir: string
-) {
-  const result = await execa("mkdir", [projectDir], {
-    cwd: targetDir,
-  });
+export async function createProjectDirectory(projectName: string) {
+  try {
+    const result = await execa("mkdir", [projectName]);
 
-  if (result.failed) {
-    return Promise.reject(new Error("Failed to create directory"));
+    if (result.failed) {
+      throw new Error("There was a problem running the mkdir command");
+    }
+  } catch (error) {
+    throw new Error("Failed to create directory", { cause: error });
   }
 
   return true;

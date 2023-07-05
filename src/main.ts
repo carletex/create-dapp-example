@@ -22,21 +22,21 @@ export async function createProject(options: Options) {
   const tasks = new Listr([
     {
       title: `📁 Create project directory ${targetDirectory}`,
-      task: () => createProjectDirectory(options.project, process.cwd()),
+      task: () => createProjectDirectory(options.project),
     },
     {
       title: `🚀 Creating a new Scaffold-ETH 2 app in ${chalk.green.bold(
         options.project
       )}`,
-      task: async () =>
-        await copyTemplateFiles(options, templateDirectory, targetDirectory),
+      task: () =>
+        copyTemplateFiles(options, templateDirectory, targetDirectory),
     },
     {
       title: `📦 Installing dependencies with yarn, this could take a while`,
       task: () => installPackages(targetDirectory),
       skip: () => {
         if (!options.install) {
-          return "Pass --install or -i to automatically install dependencies";
+          return "Manually skipped";
         }
       },
     },
