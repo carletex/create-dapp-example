@@ -16,7 +16,6 @@
     "scaffold-eth 2",
     "wagmi"
   ],
-  "author": "Shiv Bhonde <shivbhonde04@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-typescript": "11.1.0",
