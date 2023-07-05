@@ -67,7 +67,9 @@ For each extension there is an optional `templates/extensions/{extensionName}/co
 
 ## Config files API
 ### `src/config.ts`
-Have a look at `src/types.ts#Config`
+Have a look at `src/types.ts#Config` or the file itself.
+
+Just a quick note to mention that adding `null` as an item in the `extensions` property will show the "None" option to the user. That option doesn't add any extension for the given question.
 
 ### `{extension}/config.json`
 Since these files can't be .ts, the API is not typed. However, there are certain properties that are used in the code.

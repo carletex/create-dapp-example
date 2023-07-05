@@ -6,7 +6,7 @@ const config: Config = {
       type: "single-select",
       name: "a",
       message: "Select library for A",
-      extensions: ["a1", "a2"],
+      extensions: ["a1", "a2", null],
       default: "a2",
     }),
     typedQuestion({

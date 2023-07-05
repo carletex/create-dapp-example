@@ -6,6 +6,7 @@ import {
   RawOptions,
   extensionWithSubextensions,
   isDefined,
+  isExtension
 } from "../types";
 import inquirer, { Answers } from "inquirer";
 import { extensionDict } from "./extensions-tree";
@@ -18,6 +19,10 @@ const defaultOptions: RawOptions = {
 };
 
 const invalidQuestionNames = ["project", "install"];
+const nullExtensionChoice = {
+  name: 'None',
+  value: null
+}
 
 export async function promptForMissingOptions(
   options: RawOptions
@@ -73,14 +78,17 @@ export async function promptForMissingOptions(
       );
     }
     const extensions = question.extensions
+      .filter(isExtension)
       .map((ext) => extensionDict[ext])
       .filter(isDefined);
+
+    const hasNoneOption = question.extensions.includes(null)
 
     questions.push({
       type: question.type === "multi-select" ? "checkbox" : "list",
       name: question.name,
       message: question.message,
-      choices: extensions,
+      choices: hasNoneOption ? [...extensions, nullExtensionChoice] : extensions,
     });
 
     recurringAddFollowUps(extensions, question.name);
@@ -103,7 +111,7 @@ export async function promptForMissingOptions(
 
   config.questions.forEach((question) => {
     const { name } = question;
-    const choice: Extension[] = [answers[name]].flat();
+    const choice: Extension[] = [answers[name]].flat().filter(isDefined);
     mergedOptions.extensions.push(...choice);
   });
 

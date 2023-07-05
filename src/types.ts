@@ -33,17 +33,22 @@ export type HandleBarTemplateOptions = Options & {
 };
 
 export type Extension = "a1" | "a2" | "a3" | "b" | "c" | "d" | "b-extension";
+type NullExtension = null
+export type ExtensionOrNull = Extension | NullExtension
 // corresponds to inquirer question types:
 //  - multi-select -> checkbox
 //  - single-select -> list
 type QuestionType = "multi-select" | "single-select";
-interface ExtensionQuestion<T extends Extension[] = Extension[]> {
+interface ExtensionQuestion<T extends ExtensionOrNull[] = ExtensionOrNull[]> {
   type: QuestionType;
   extensions: T;
   name: string;
   message: Question["message"];
   default?: T[number];
 }
+
+export const isExtension = (item: ExtensionOrNull): item is Extension =>
+  item !== null;
 
 /**
  * This function makes sure that the `T` generic type is narrowed down to
@@ -54,7 +59,7 @@ interface ExtensionQuestion<T extends Extension[] = Extension[]> {
  * Questions can be created without this function, just using a normal object,
  * but `default` type will be any valid Extension.
  */
-export const typedQuestion = <T extends Extension[]>(
+export const typedQuestion = <T extends ExtensionOrNull[]>(
   question: ExtensionQuestion<T>
 ) => question;
 export type Config = {
@@ -71,6 +76,7 @@ export type ExtensionDescriptor = {
   extensions?: Extension[];
   extends?: Extension;
 };
+
 export type ExtensionBranch = ExtensionDescriptor & {
   extensions: Extension[];
 };
