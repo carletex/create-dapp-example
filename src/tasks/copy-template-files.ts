@@ -188,6 +188,22 @@ const processTemplatedFiles = async (
   );
 };
 
+async function replaceGitignoreKeep(targetDir: string): Promise<void> {
+  const files = await fs.promises.readdir(targetDir);
+
+  for (const file of files) {
+    const filePath = path.join(targetDir, file);
+    const stat = await fs.promises.stat(filePath);
+
+    if (stat.isDirectory()) {
+      await replaceGitignoreKeep(filePath);
+    } else if (file === ".gitignore-keep") {
+      const newFilePath = path.join(targetDir, ".gitignore");
+      await fs.promises.rename(filePath, newFilePath);
+    }
+  }
+}
+
 export async function copyTemplateFiles(
   options: Options,
   templateDir: string,
@@ -212,12 +228,6 @@ export async function copyTemplateFiles(
 
   // 5. Rename recursively all the .gitignore-keep files into .gitignore
   // Reason: npm publish ignores .gitignore files
-  findFilesRecursiveSync(targetDir, (path) =>
-    path.endsWith(".gitignore-keep")
-  ).forEach((gitignoreKeepFilePath) => {
-    fs.renameSync(
-      gitignoreKeepFilePath,
-      gitignoreKeepFilePath.replace(".gitignore-keep", ".gitignore")
-    );
-  });
+  // ToDo. existing findFilesRecursiveSync function doesn't work
+  replaceGitignoreKeep(targetDir);
 }

@@ -1,11 +1,11 @@
 import { copyTemplateFiles, createProjectDirectory } from "./tasks";
+import { installPackages } from "./tasks/install-packages";
 import type { Options } from "./types";
+import { renderOutroMessage } from "./utils/render-outro-message";
 import chalk from "chalk";
 import Listr from "listr";
 import path from "path";
 import { fileURLToPath } from "url";
-import { installPackages } from "./tasks/install-packages";
-import { renderOutroMessage } from "./utils/render-outro-message";
 
 export async function createProject(options: Options) {
   console.log(`\n`);
@@ -43,23 +43,6 @@ export async function createProject(options: Options) {
   ]);
 
   try {
-    // console.log(`📁 Creating project directory ${targetDirectory}...`);
-
-    // await createProjectDirectory(options.project, process.cwd());
-    // console.log(`📁 created project directory ${targetDirectory}`);
-    // console.log(
-    //   `🚀 Creating a new Scaffold-ETH 2 app in ${chalk.green.bold(
-    //     options.project
-    //   )}`
-    // );
-    // await copyTemplateFiles(options, templateDirectory, targetDirectory);
-    // console.log(
-    //   `🚀 New Scaffold-ETH 2 app in ${chalk.green.bold(options.project)}`
-    // );
-    // console.log(
-    //   `Installing dependencies with yarn, this could take a while...`
-    // );
-    // await installPackages(targetDirectory);
     await tasks.run();
     renderOutroMessage(options);
   } catch (error) {
