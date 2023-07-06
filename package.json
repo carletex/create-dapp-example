@@ -1,6 +1,6 @@
 {
   "name": "create-dapp-example",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "description": "Create SE-2 dapp with ease",
   "main": "dist/cli.js",
   "type": "module",

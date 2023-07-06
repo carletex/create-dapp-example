@@ -1,27 +1,29 @@
 import { Extension, Options, TemplateDescriptor, isDefined } from "../types";
+import { baseDir } from "../utils/consts";
+import { extensionDict } from "../utils/extensions-tree";
+import { findFilesRecursiveSync } from "../utils/find-files-recursively";
+import { mergePackageJson } from "../utils/merge-pacakge-json";
 import fs from "fs";
 import ncp from "ncp";
 import path from "path";
 import { promisify } from "util";
-import { baseDir } from "../utils/consts";
-import { mergePackageJson } from "../utils/merge-pacakge-json";
-import { extensionDict } from "../utils/extensions-tree";
-import { findFilesRecursiveSync } from "../utils/find-files-recursively";
 
 const copy = promisify(ncp);
 
 const expandExtensions = (options: Options): Extension[] => {
   const expandedExtensions = options.extensions
     .map((extension) => extensionDict[extension])
-    .map((extDescriptor) => [extDescriptor.extends, extDescriptor.value].filter(isDefined)
+    .map((extDescriptor) =>
+      [extDescriptor.extends, extDescriptor.value].filter(isDefined)
     )
     .flat()
     // this reduce just removes duplications
-    .reduce((exts, ext) =>
-      exts.includes(ext) ? exts : [...exts, ext]
-    , [] as Extension[]);
+    .reduce(
+      (exts, ext) => (exts.includes(ext) ? exts : [...exts, ext]),
+      [] as Extension[]
+    );
 
-  return expandedExtensions
+  return expandedExtensions;
 };
 
 const isTemplateRegex = /([^\/\\]*?)\.template\./;
@@ -200,11 +202,22 @@ export async function copyTemplateFiles(
 
   // 2. Add "parent" extensions (set via config.json#extend field)
   const expandedExtension = expandExtensions(options);
-  options.extensions = expandedExtension
+  options.extensions = expandedExtension;
 
   // 3. Copy extensions folders
   copyExtensionsFiles(options, targetDir);
 
   // 4. Process templated files and generate output
   processTemplatedFiles(options, basePath, targetDir);
+
+  // 5. Rename recursively all the .gitignore-keep files into .gitignore
+  // Reason: npm publish ignores .gitignore files
+  findFilesRecursiveSync(targetDir, (path) =>
+    path.endsWith(".gitignore-keep")
+  ).forEach((gitignoreKeepFilePath) => {
+    fs.renameSync(
+      gitignoreKeepFilePath,
+      gitignoreKeepFilePath.replace(".gitignore-keep", ".gitignore")
+    );
+  });
 }
