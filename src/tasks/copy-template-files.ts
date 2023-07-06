@@ -221,13 +221,13 @@ export async function copyTemplateFiles(
   options.extensions = expandedExtension;
 
   // 3. Copy extensions folders
-  copyExtensionsFiles(options, targetDir);
+  await copyExtensionsFiles(options, targetDir);
 
   // 4. Process templated files and generate output
-  processTemplatedFiles(options, basePath, targetDir);
+  await processTemplatedFiles(options, basePath, targetDir);
 
   // 5. Rename recursively all the .gitignore-keep files into .gitignore
   // Reason: npm publish ignores .gitignore files
   // ToDo. existing findFilesRecursiveSync function doesn't work
-  replaceGitignoreKeep(targetDir);
+  await replaceGitignoreKeep(targetDir);
 }

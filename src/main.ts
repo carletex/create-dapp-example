@@ -1,5 +1,9 @@
-import { copyTemplateFiles, createProjectDirectory } from "./tasks";
-import { installPackages } from "./tasks/install-packages";
+import {
+  copyTemplateFiles,
+  createProjectDirectory,
+  installPackages,
+  initGitRepository,
+} from "./tasks";
 import type { Options } from "./types";
 import { renderOutroMessage } from "./utils/render-outro-message";
 import chalk from "chalk";
@@ -39,6 +43,10 @@ export async function createProject(options: Options) {
           return "Manually skipped";
         }
       },
+    },
+    {
+      title: `🗃 Initializing git repository`,
+      task: () => initGitRepository(targetDirectory),
     },
   ]);
 
