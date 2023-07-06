@@ -1,6 +1,8 @@
-import { execa, ExecaError } from "execa";
+import { execa } from "execa";
+import { Options } from "../types";
+import path from "path";
 
-export async function initGitRepository(targetDir: string) {
+export async function initGitRepository(targetDir: string, options: Options) {
   try {
     await execa("git", ["init"], { cwd: targetDir });
     await execa("git", ["checkout", "-b", "main"], { cwd: targetDir });
@@ -10,6 +12,24 @@ export async function initGitRepository(targetDir: string) {
       ["commit", "-m", "Initial commit with 🏗️ Scaffold-ETH 2"],
       { cwd: targetDir }
     );
+
+    if (options.extensions?.includes("foundry")) {
+      await execa(
+        "git",
+        [
+          "submodule",
+          "add",
+          "https://github.com/foundry-rs/forge-std",
+          "lib/forge-std",
+        ],
+        {
+          cwd: path.resolve(targetDir, "packages", "foundry"),
+        }
+      );
+      await execa("git", ["submodule", "update", "--init", "--recursive"], {
+        cwd: path.resolve(targetDir, "packages", "foundry"),
+      });
+    }
   } catch (e: any) {
     // cast error as ExecaError to get stderr
 
